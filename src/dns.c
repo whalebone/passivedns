@@ -31,6 +31,9 @@
 #include "passivedns.h"
 #include "dns.h"
 
+#include <openssl/sha.h>
+#include <math.h>
+
 #ifdef HAVE_JSON
 #include <jansson.h>
 #endif /* HAVE_JSON */
@@ -42,6 +45,8 @@ extern globalconfig config;
 #define DBUCKET_SIZE  3967   /* Carol that is primes */
 
 pdns_record *dbucket[DBUCKET_SIZE];
+char hash_datestamp[200];
+char hash_datesha256[65];
 
 uint64_t hash(unsigned char *str)
 {
@@ -644,6 +649,44 @@ const char *u_ntop(const struct in6_addr ip_addr, int af, char *dest)
     return dest;
 }
 
+void sha256(char *string, char salt[65], char outputBuffer[65]) 
+{
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    if (strlen(salt) > 0) 
+    {
+        SHA256_Update(&sha256, salt, strlen(salt));
+    }
+    SHA256_Update(&sha256, string, strlen(string));
+    SHA256_Final(hash, &sha256);
+    int i = 0;
+    for(i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
+    }
+    outputBuffer[64] = 0;
+}
+
+void sha256_string(pdns_record *l, char *string, char outputBuffer[65])
+{
+    struct tm *tmpTime;
+    char timestr[200];
+    char timebuf[200];
+    tmpTime = localtime(&l->last_seen.tv_sec);
+    strftime(timestr, sizeof(timestr), "%Y-%m-%d", tmpTime);
+    if (strcmp(timestr, hash_datestamp) != 0)
+    {
+        strcpy(hash_datestamp, timestr);
+        strftime(timebuf, sizeof(timestr), "%Y-%m-%d %H:%M:%S", tmpTime);
+        sprintf(timestr, "%s.%03d\n", timebuf, l->last_seen.tv_usec);
+        sha256(timestr, "", hash_datesha256);
+        //printf("%s -- %s\n", timestr, hash_datesha256);
+    }
+
+    sha256(string, hash_datesha256, outputBuffer);
+}
+
 void print_passet(pdns_record *l, pdns_asset *p, ldns_rr *rr,
                   ldns_rdf *lname, uint16_t rcode)
 {
@@ -1067,7 +1110,10 @@ void print_passet(pdns_record *l, pdns_asset *p, ldns_rr *rr,
         if (config.fieldsf & FIELD_CLIENT) {
             if (offset != 0)
                 offset += snprintf(output+offset, sizeof(buffer) - offset, "%s", d);
-            offset += snprintf(output+offset, sizeof(buffer) - offset, "%s", ip_addr_c);
+            
+            unsigned char shahash[65];
+            sha256_string(l, ip_addr_c, shahash);
+            offset += snprintf(output+offset, sizeof(buffer) - offset, "%s", shahash);
         }
 
         /* Print client hardware address  */
