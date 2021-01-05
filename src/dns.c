@@ -674,14 +674,14 @@ void sha256_string(pdns_record *l, char *string, char outputBuffer[65])
     char timestr[200];
     char timebuf[200];
     tmpTime = localtime(&l->last_seen.tv_sec);
-    strftime(timestr, sizeof(timestr), "%Y-%m-%d", tmpTime);
+    strftime(timestr, sizeof(timestr), "%Y-%U", tmpTime);
     if (strcmp(timestr, hash_datestamp) != 0)
     {
         strcpy(hash_datestamp, timestr);
-        strftime(timebuf, sizeof(timestr), "%Y-%m-%d %H:%M:%S", tmpTime);
+        strftime(timebuf, sizeof(timestr), "%U %Y-%m-%d %H:%M:%S", tmpTime);
         sprintf(timestr, "%s.%03d\n", timebuf, l->last_seen.tv_usec);
         sha256(timestr, "", hash_datesha256);
-        //printf("%s -- %s\n", timestr, hash_datesha256);
+        //printf("** %s -- %s\n", timestr, hash_datesha256);
     }
 
     sha256(string, hash_datesha256, outputBuffer);
