@@ -1,0 +1,29 @@
+name: License Compliance Check
+# UNCOMMENT TO ENABLE THE WORKFLOW
+# on:
+#   push:
+#     branches:
+#     - "**"
+#     paths-ignore:
+#     - "k8s/**"
+#     - "**/*.md"
+jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+
+# SETUP DEVELOPMENT ENVIRONMENT FOR THE LANGUAGE OF THE REPOSITORY
+# this should be similar to the setup for tests
+
+###############################################################
+#    - name: Checkout and setup go for private repositories
+#      uses: whalebone/github-actions-go/checkout-setup@v1
+#      with:
+#        go-version-file: "go.mod"
+#        GH_USERNAME: ${{ secrets.GH_USERNAME }}
+#        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+###############################################################
+    - name: Run License Compliance Check
+      uses: whalebone/license-compliance@v1
+      with:
+        licenses_group: 'cloud' # 'cloud' or 'onprem' at the moment
